@@ -73,6 +73,7 @@ resource "azurerm_lb_backend_address_pool" "ilb_bepool" {
 # virtual_machine
 locals {
   vm_name_format = "${var.compute["name"]}-%02d"
+  avset_required = "${var.lb["required"] || var.ilb["required"] || var.avset["required"]}"
 }
 
 data "azurerm_subnet" "subnet" {
@@ -82,6 +83,8 @@ data "azurerm_subnet" "subnet" {
 }
 
 data "azurerm_storage_account" "storage_account" {
+  count = "${var.compute["boot_diagnostics_enabled"] ? 1 : 0}"
+
   resource_group_name = "${var.storage_account["resource_group_name"]}"
   name                = "${var.storage_account["name"]}"
 }
@@ -112,7 +115,7 @@ resource "azurerm_virtual_machine" "vms" {
   delete_os_disk_on_termination = "${lookup(var.computes[count.index], "os_disk_on_termination", var.compute["os_disk_on_termination"])}"
 
   network_interface_ids = ["${element(azurerm_network_interface.nics.*.id, count.index)}"]
-  availability_set_id   = "${var.avset["required"] ? "${join("", azurerm_availability_set.avset.*.id)}" : ""}"
+  availability_set_id   = "${local.avset_required ? "${join("", azurerm_availability_set.avset.*.id)}" : ""}"
 
   boot_diagnostics {
     enabled     = "${var.compute["boot_diagnostics_enabled"] ? lookup(var.computes[count.index], "boot_diagnostics_enabled", var.compute["boot_diagnostics_enabled"]) : false}"
@@ -143,7 +146,8 @@ resource "azurerm_managed_disk" "os_disks" {
 }
 
 resource "azurerm_network_interface" "nics" {
-  count               = "${length(var.computes)}"
+  count = "${length(var.computes)}"
+
   resource_group_name = "${var.compute["resource_group_name"]}"
 
   name     = "${lookup(var.computes[count.index], "name", format(local.vm_name_format, count.index + 1))}-nic"
@@ -165,7 +169,7 @@ resource "azurerm_network_interface" "nics" {
 
 # avset
 resource "azurerm_availability_set" "avset" {
-  count = "${var.lb["required"] || var.ilb["required"] || var.avset["required"] ? 1 : 0}"
+  count = "${local.avset_required ? 1 : 0}"
 
   resource_group_name = "${var.compute["resource_group_name"]}"
 
