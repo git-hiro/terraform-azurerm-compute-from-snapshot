@@ -1,3 +1,29 @@
+# lb
+variable "lb" {
+  default = {
+    required = false
+    location = "japaneast"
+
+    domain_name_label     = ""
+    ip_address_allocation = "Dynamic"
+  }
+}
+
+# ilb
+variable "ilb" {
+  default = {
+    required = false
+    location = "japaneast"
+
+    vnet_resource_group_name = ""
+    vnet_name                = ""
+    vnet_subnet_name         = ""
+
+    private_ip_address = ""
+  }
+}
+
+# virtual_machine
 variable "subnet" {
   default = {
     vnet_resource_group_name = ""
@@ -20,20 +46,6 @@ variable "snapshot" {
   }
 }
 
-variable "avset" {
-  default = {
-    exists = true
-
-    name     = ""
-    location = "japaneast"
-
-    platform_fault_domain_count  = 2
-    platform_update_domain_count = 5
-
-    managed = true
-  }
-}
-
 variable "compute" {
   default = {
     location = "japaneast"
@@ -45,10 +57,25 @@ variable "compute" {
     os_disk_size_gb        = 60
     os_disk_on_termination = true
 
-    boot_diagnostics_enabled = true
+    boot_diagnostics_enabled = false
   }
 }
 
 variable "computes" {
   default = []
+}
+
+# avset
+variable "avset" {
+  default = {
+    required = false
+
+    name     = ""
+    location = "japaneast"
+
+    platform_fault_domain_count  = 2
+    platform_update_domain_count = 5
+
+    managed = true
+  }
 }
