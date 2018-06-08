@@ -25,3 +25,11 @@ output "vms" {
     )
   }"
 }
+
+output "avset" {
+  value = "${
+    map(
+      "name", "${azurerm_availability_set.avset.*.name}",
+    )
+  }"
+}
