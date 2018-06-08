@@ -1,1 +1,1 @@
-# terraform-azurerm-compute-from-snapshot
+# terraform-azurerm-linux-from-snapshot
