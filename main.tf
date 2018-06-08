@@ -157,8 +157,8 @@ resource "azurerm_network_interface" "nics" {
     private_ip_address            = "${lookup(var.computes[count.index], "private_ip_address", "")}"
 
     load_balancer_backend_address_pools_ids = [
-      "${azurerm_lb_backend_address_pool.lb_bepool.id}",
-      "${azurerm_lb_backend_address_pool.ilb_bepool.id}",
+      "${azurerm_lb_backend_address_pool.lb_bepool.*.id}",
+      "${azurerm_lb_backend_address_pool.ilb_bepool.*.id}",
     ]
   }
 }
