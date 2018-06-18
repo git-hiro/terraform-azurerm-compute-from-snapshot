@@ -99,7 +99,7 @@ resource "azurerm_virtual_machine" "vms" {
 
   resource_group_name = "${var.compute["resource_group_name"]}"
 
-  name     = "${lookup(var.computes[count.index], "name", format(local.vm_name_format, count.index + 1))}"
+  name     = "${lookup(var.computes[count.index], "computer_name", format(local.vm_name_format, count.index + 1))}"
   location = "${lookup(var.computes[count.index], "location", var.compute["location"])}"
   vm_size  = "${lookup(var.computes[count.index], "vm_size", var.compute["vm_size"])}"
 
