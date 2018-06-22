@@ -43,6 +43,8 @@ variable "snapshot" {
   default = {
     resource_group_name = ""
     name                = ""
+
+    uri = ""
   }
 }
 

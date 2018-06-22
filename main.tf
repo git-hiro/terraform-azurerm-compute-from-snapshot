@@ -90,6 +90,8 @@ data "azurerm_storage_account" "storage_account" {
 }
 
 data "azurerm_snapshot" "snapshot" {
+  count = "${var.snapshot["name"] != "" ? 1 : 0}"
+
   resource_group_name = "${var.snapshot["resource_group_name"]}"
   name                = "${var.snapshot["name"]}"
 }
@@ -138,11 +140,12 @@ resource "azurerm_managed_disk" "os_disks" {
   location = "${lookup(var.computes[count.index], "location", var.compute["location"])}"
 
   os_type              = "${var.compute["os_type"]}"
-  create_option        = "Copy"
+  create_option        = "${var.snapshot["name"] != "" ? "Copy" : "Import"}"
   storage_account_type = "${lookup(var.computes[count.index], "os_disk_type", var.compute["os_disk_type"])}"
   disk_size_gb         = "${lookup(var.computes[count.index], "os_disk_size_gb", var.compute["os_disk_size_gb"])}"
 
-  source_resource_id = "${data.azurerm_snapshot.snapshot.id}"
+  source_resource_id = "${var.snapshot["name"] != "" ? join("", data.azurerm_snapshot.snapshot.*.id) : ""}"
+  source_uri         = "${var.snapshot["name"] != "" ? "" : var.snapshot["uri"]}"
 }
 
 resource "azurerm_network_interface" "nics" {
