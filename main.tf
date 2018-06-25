@@ -224,8 +224,6 @@ resource "azurerm_virtual_machine" "vms_with" {
 
     disk_size_gb = "${lookup(var.computes[count.index], "data_disk_size_gb", lookup(var.compute, "data_disk_size_gb", ""))}"
 
-    # managed_disk_type = "${var.data_sa_type}"
-
     caching         = "ReadWrite"
     create_option   = "Attach"
     managed_disk_id = "${element(azurerm_managed_disk.data_disks.*.id, count.index)}"
