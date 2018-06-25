@@ -35,6 +35,40 @@ resource "azurerm_lb_backend_address_pool" "lb_bepool" {
   loadbalancer_id = "${join("", azurerm_lb.lb.*.id)}"
 }
 
+resource "azurerm_lb_probe" "lb_probes" {
+  count = "${var.lb["required"] ? length(var.lb_probes) : 0}"
+
+  resource_group_name = "${var.compute["resource_group_name"]}"
+  loadbalancer_id     = "${azurerm_lb.lb.id}"
+
+  name         = "${lookup(var.lb_probes[count.index], "name")}"
+  protocol     = "${lookup(var.lb_probes[count.index], "protocol", "Tcp")}"
+  port         = "${lookup(var.lb_probes[count.index], "port")}"
+  request_path = "${lookup(var.lb_probes[count.index], "request_path", "")}"
+
+  interval_in_seconds = "${lookup(var.lb_probes[count.index], "interval_in_seconds", "15")}"
+  number_of_probes    = "${lookup(var.lb_probes[count.index], "number_of_probes", "2")}"
+}
+
+resource "azurerm_lb_rule" "lb_rules" {
+  count = "${var.lb["required"] ? length(var.lb_rules) : 0}"
+
+  resource_group_name            = "${var.compute["resource_group_name"]}"
+  loadbalancer_id                = "${azurerm_lb.lb.id}"
+  frontend_ip_configuration_name = "${lookup(azurerm_lb.lb.frontend_ip_configuration[0], "name")}"
+  backend_address_pool_id        = "${azurerm_lb_backend_address_pool.lb_bepool.id}"
+
+  probe_id = "${element(azurerm_lb_probe.lb_probes.*.id, lookup(var.lb_rules[count.index], "probe_index", 0))}"
+
+  name          = "${lookup(var.lb_rules[count.index], "name")}"
+  protocol      = "${lookup(var.lb_rules[count.index], "protocol", "Tcp")}"
+  frontend_port = "${lookup(var.lb_rules[count.index], "frontend_port")}"
+  backend_port  = "${lookup(var.lb_rules[count.index], "backend_port")}"
+
+  idle_timeout_in_minutes = "${lookup(var.lb_rules[count.index], "idle_timeout_in_minutes", "4")}"
+  load_distribution       = "${lookup(var.lb_rules[count.index], "load_distribution", "Default")}"
+}
+
 # ilb
 data "azurerm_subnet" "ilb_subnet" {
   count = "${var.ilb["required"] ? 1 : 0}"
@@ -68,6 +102,40 @@ resource "azurerm_lb_backend_address_pool" "ilb_bepool" {
 
   name            = "${var.compute["name"]}-bepool"
   loadbalancer_id = "${join("", azurerm_lb.ilb.*.id)}"
+}
+
+resource "azurerm_lb_probe" "ilb_probes" {
+  count = "${var.ilb["required"] ? length(var.ilb_probes) : 0}"
+
+  resource_group_name = "${var.compute["resource_group_name"]}"
+  loadbalancer_id     = "${azurerm_lb.ilb.id}"
+
+  name         = "${lookup(var.ilb_probes[count.index], "name")}"
+  protocol     = "${lookup(var.ilb_probes[count.index], "protocol", "Tcp")}"
+  port         = "${lookup(var.ilb_probes[count.index], "port")}"
+  request_path = "${lookup(var.ilb_probes[count.index], "request_path", "")}"
+
+  interval_in_seconds = "${lookup(var.ilb_probes[count.index], "interval_in_seconds", "15")}"
+  number_of_probes    = "${lookup(var.ilb_probes[count.index], "number_of_probes", "2")}"
+}
+
+resource "azurerm_lb_rule" "ilb_rules" {
+  count = "${var.ilb["required"] ? length(var.ilb_rules) : 0}"
+
+  resource_group_name            = "${var.compute["resource_group_name"]}"
+  loadbalancer_id                = "${azurerm_lb.ilb.id}"
+  frontend_ip_configuration_name = "${lookup(azurerm_lb.ilb.frontend_ip_configuration[0], "name")}"
+  backend_address_pool_id        = "${azurerm_lb_backend_address_pool.ilb_bepool.id}"
+
+  probe_id = "${element(azurerm_lb_probe.ilb_probes.*.id, lookup(var.ilb_rules[count.index], "probe_index", 0))}"
+
+  name          = "${lookup(var.ilb_rules[count.index], "name")}"
+  protocol      = "${lookup(var.ilb_rules[count.index], "protocol", "Tcp")}"
+  frontend_port = "${lookup(var.ilb_rules[count.index], "frontend_port")}"
+  backend_port  = "${lookup(var.ilb_rules[count.index], "backend_port")}"
+
+  idle_timeout_in_minutes = "${lookup(var.ilb_rules[count.index], "idle_timeout_in_minutes", "4")}"
+  load_distribution       = "${lookup(var.ilb_rules[count.index], "load_distribution", "Default")}"
 }
 
 # virtual_machine
