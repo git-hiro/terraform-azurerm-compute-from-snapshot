@@ -9,6 +9,14 @@ variable "lb" {
   }
 }
 
+variable "lb_probes" {
+  default = []
+}
+
+variable "lb_rules" {
+  default = []
+}
+
 # ilb
 variable "ilb" {
   default = {
@@ -21,6 +29,14 @@ variable "ilb" {
 
     private_ip_address = ""
   }
+}
+
+variable "ilb_probes" {
+  default = []
+}
+
+variable "ilb_rules" {
+  default = []
 }
 
 # virtual_machine
@@ -39,7 +55,16 @@ variable "storage_account" {
   }
 }
 
-variable "snapshot" {
+variable "snapshot_os" {
+  default = {
+    resource_group_name = ""
+    name                = ""
+
+    uri = ""
+  }
+}
+
+variable "snapshot_data" {
   default = {
     resource_group_name = ""
     name                = ""
@@ -58,6 +83,9 @@ variable "compute" {
     os_disk_type           = "Standard_LRS"
     os_disk_size_gb        = 60
     os_disk_on_termination = true
+
+    data_disk_type    = "Standard_LRS"
+    data_disk_size_gb = 60
 
     boot_diagnostics_enabled = false
   }

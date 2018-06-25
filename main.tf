@@ -157,15 +157,22 @@ data "azurerm_storage_account" "storage_account" {
   name                = "${var.storage_account["name"]}"
 }
 
-data "azurerm_snapshot" "snapshot" {
-  count = "${var.snapshot["name"] != "" ? 1 : 0}"
+data "azurerm_snapshot" "snapshot_os" {
+  count = "${var.snapshot_os["name"] != "" ? 1 : 0}"
 
-  resource_group_name = "${var.snapshot["resource_group_name"]}"
-  name                = "${var.snapshot["name"]}"
+  resource_group_name = "${var.snapshot_os["resource_group_name"]}"
+  name                = "${var.snapshot_os["name"]}"
+}
+
+data "azurerm_snapshot" "snapshot_data" {
+  count = "${var.snapshot_data["name"] != "" ? 1 : 0}"
+
+  resource_group_name = "${var.snapshot_data["resource_group_name"]}"
+  name                = "${var.snapshot_data["name"]}"
 }
 
 resource "azurerm_virtual_machine" "vms" {
-  count = "${length(var.computes)}"
+  count = "${var.snapshot_data["name"] == "" ? length(var.computes) : 0}"
 
   resource_group_name = "${var.compute["resource_group_name"]}"
 
@@ -173,7 +180,7 @@ resource "azurerm_virtual_machine" "vms" {
   location = "${lookup(var.computes[count.index], "location", var.compute["location"])}"
   vm_size  = "${lookup(var.computes[count.index], "vm_size", var.compute["vm_size"])}"
 
-  storage_os_disk {
+  storage_os_disk = {
     name = "${lookup(var.computes[count.index], "name", format(local.vm_name_format, count.index + 1))}-os-disk"
 
     os_type         = "${var.compute["os_type"]}"
@@ -183,20 +190,55 @@ resource "azurerm_virtual_machine" "vms" {
   }
 
   delete_os_disk_on_termination = "${lookup(var.computes[count.index], "os_disk_on_termination", var.compute["os_disk_on_termination"])}"
-
-  network_interface_ids = ["${element(azurerm_network_interface.nics.*.id, count.index)}"]
-  availability_set_id   = "${local.avset_required ? "${join("", azurerm_availability_set.avset.*.id)}" : ""}"
+  network_interface_ids         = ["${element(azurerm_network_interface.nics.*.id, count.index)}"]
+  availability_set_id           = "${local.avset_required ? "${join("", azurerm_availability_set.avset.*.id)}" : ""}"
 
   boot_diagnostics {
     enabled     = "${var.compute["boot_diagnostics_enabled"] ? lookup(var.computes[count.index], "boot_diagnostics_enabled", var.compute["boot_diagnostics_enabled"]) : false}"
     storage_uri = "${data.azurerm_storage_account.storage_account.primary_blob_endpoint}"
   }
+}
 
-  depends_on = [
-    "azurerm_network_interface.nics",
-    "azurerm_availability_set.avset",
-    "azurerm_managed_disk.os_disks",
-  ]
+resource "azurerm_virtual_machine" "vms_with" {
+  count = "${var.snapshot_data["name"] != "" ? length(var.computes) : 0}"
+
+  resource_group_name = "${var.compute["resource_group_name"]}"
+
+  name     = "${lookup(var.computes[count.index], "computer_name", format(local.vm_name_format, count.index + 1))}"
+  location = "${lookup(var.computes[count.index], "location", var.compute["location"])}"
+  vm_size  = "${lookup(var.computes[count.index], "vm_size", var.compute["vm_size"])}"
+
+  storage_os_disk = {
+    name = "${lookup(var.computes[count.index], "name", format(local.vm_name_format, count.index + 1))}-os-disk"
+
+    os_type         = "${var.compute["os_type"]}"
+    caching         = "ReadWrite"
+    create_option   = "Attach"
+    managed_disk_id = "${element(azurerm_managed_disk.os_disks.*.id, count.index)}"
+  }
+
+  storage_data_disk = {
+    name = "${lookup(var.computes[count.index], "name", format(local.vm_name_format, count.index + 1))}-data-disk"
+
+    lun = 0
+
+    disk_size_gb = "${lookup(var.computes[count.index], "data_disk_size_gb", lookup(var.compute, "data_disk_size_gb", ""))}"
+
+    # managed_disk_type = "${var.data_sa_type}"
+
+    caching         = "ReadWrite"
+    create_option   = "Attach"
+    managed_disk_id = "${element(azurerm_managed_disk.data_disks.*.id, count.index)}"
+  }
+
+  delete_os_disk_on_termination = "${lookup(var.computes[count.index], "os_disk_on_termination", var.compute["os_disk_on_termination"])}"
+  network_interface_ids         = ["${element(azurerm_network_interface.nics.*.id, count.index)}"]
+  availability_set_id           = "${local.avset_required ? "${join("", azurerm_availability_set.avset.*.id)}" : ""}"
+
+  boot_diagnostics {
+    enabled     = "${var.compute["boot_diagnostics_enabled"] ? lookup(var.computes[count.index], "boot_diagnostics_enabled", var.compute["boot_diagnostics_enabled"]) : false}"
+    storage_uri = "${data.azurerm_storage_account.storage_account.primary_blob_endpoint}"
+  }
 }
 
 resource "azurerm_managed_disk" "os_disks" {
@@ -208,12 +250,29 @@ resource "azurerm_managed_disk" "os_disks" {
   location = "${lookup(var.computes[count.index], "location", var.compute["location"])}"
 
   os_type              = "${var.compute["os_type"]}"
-  create_option        = "${var.snapshot["name"] != "" ? "Copy" : "Import"}"
+  create_option        = "${var.snapshot_os["name"] != "" ? "Copy" : "Import"}"
   storage_account_type = "${lookup(var.computes[count.index], "os_disk_type", var.compute["os_disk_type"])}"
   disk_size_gb         = "${lookup(var.computes[count.index], "os_disk_size_gb", var.compute["os_disk_size_gb"])}"
 
-  source_resource_id = "${var.snapshot["name"] != "" ? join("", data.azurerm_snapshot.snapshot.*.id) : ""}"
-  source_uri         = "${var.snapshot["name"] != "" ? "" : var.snapshot["uri"]}"
+  source_resource_id = "${var.snapshot_os["name"] != "" ? join("", data.azurerm_snapshot.snapshot_os.*.id) : ""}"
+  source_uri         = "${var.snapshot_os["name"] != "" ? "" : lookup(var.snapshot_os, "uri", "")}"
+}
+
+resource "azurerm_managed_disk" "data_disks" {
+  count = "${var.snapshot_data["name"] != "" ? length(var.computes) : 0}"
+
+  resource_group_name = "${var.compute["resource_group_name"]}"
+
+  name     = "${lookup(var.computes[count.index], "name", format(local.vm_name_format, count.index + 1))}-data-disk"
+  location = "${lookup(var.computes[count.index], "location", var.compute["location"])}"
+
+  os_type              = "${var.compute["os_type"]}"
+  create_option        = "${var.snapshot_data["name"] != "" ? "Copy" : "Import"}"
+  storage_account_type = "${lookup(var.computes[count.index], "data_disk_type", lookup(var.compute, "data_disk_type", ""))}"
+  disk_size_gb         = "${lookup(var.computes[count.index], "data_disk_size_gb", lookup(var.compute, "data_disk_size_gb", ""))}"
+
+  source_resource_id = "${var.snapshot_data["name"] != "" ? join("", data.azurerm_snapshot.snapshot_data.*.id) : ""}"
+  source_uri         = "${var.snapshot_data["name"] != "" ? "" : lookup(var.snapshot_data, "uri", "")}"
 }
 
 resource "azurerm_network_interface" "nics" {
