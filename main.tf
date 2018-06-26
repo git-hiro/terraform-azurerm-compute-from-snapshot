@@ -260,7 +260,7 @@ resource "azurerm_managed_disk" "os_disks" {
 }
 
 resource "azurerm_managed_disk" "data_disks" {
-  count = "${var.snapshot_data["name"] != "" ? length(var.computes) : 0}"
+  count = "${var.compute["data_disk_required"] ? length(var.computes) : 0}"
 
   resource_group_name = "${var.compute["resource_group_name"]}"
 
