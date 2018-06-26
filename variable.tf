@@ -80,12 +80,14 @@ variable "compute" {
 
     os_type = "Linux"
 
-    os_disk_type           = "Standard_LRS"
-    os_disk_size_gb        = 60
-    os_disk_on_termination = true
+    os_disk_type    = "Standard_LRS"
+    os_disk_size_gb = 60
 
     data_disk_type    = "Standard_LRS"
     data_disk_size_gb = 60
+
+    delete_os_disk_on_termination    = true
+    delete_data_disks_on_termination = true
 
     boot_diagnostics_enabled = false
   }

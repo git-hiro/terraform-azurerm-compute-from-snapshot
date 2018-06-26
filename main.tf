@@ -189,9 +189,10 @@ resource "azurerm_virtual_machine" "vms" {
     managed_disk_id = "${element(azurerm_managed_disk.os_disks.*.id, count.index)}"
   }
 
-  delete_os_disk_on_termination = "${lookup(var.computes[count.index], "os_disk_on_termination", var.compute["os_disk_on_termination"])}"
-  network_interface_ids         = ["${element(azurerm_network_interface.nics.*.id, count.index)}"]
-  availability_set_id           = "${local.avset_required ? "${join("", azurerm_availability_set.avset.*.id)}" : ""}"
+  delete_os_disk_on_termination = "${lookup(var.computes[count.index], "delete_os_disk_on_termination", var.compute["delete_os_disk_on_termination"])}"
+
+  network_interface_ids = ["${element(azurerm_network_interface.nics.*.id, count.index)}"]
+  availability_set_id   = "${local.avset_required ? "${join("", azurerm_availability_set.avset.*.id)}" : ""}"
 
   boot_diagnostics {
     enabled     = "${var.compute["boot_diagnostics_enabled"] ? lookup(var.computes[count.index], "boot_diagnostics_enabled", var.compute["boot_diagnostics_enabled"]) : false}"
@@ -229,9 +230,11 @@ resource "azurerm_virtual_machine" "vms_with" {
     managed_disk_id = "${element(azurerm_managed_disk.data_disks.*.id, count.index)}"
   }
 
-  delete_os_disk_on_termination = "${lookup(var.computes[count.index], "os_disk_on_termination", var.compute["os_disk_on_termination"])}"
-  network_interface_ids         = ["${element(azurerm_network_interface.nics.*.id, count.index)}"]
-  availability_set_id           = "${local.avset_required ? "${join("", azurerm_availability_set.avset.*.id)}" : ""}"
+  delete_os_disk_on_termination    = "${lookup(var.computes[count.index], "delete_os_disk_on_termination", var.compute["delete_os_disk_on_termination"])}"
+  delete_data_disks_on_termination = "${lookup(var.computes[count.index], "delete_data_disks_on_termination", var.compute["delete_data_disks_on_termination"])}"
+
+  network_interface_ids = ["${element(azurerm_network_interface.nics.*.id, count.index)}"]
+  availability_set_id   = "${local.avset_required ? "${join("", azurerm_availability_set.avset.*.id)}" : ""}"
 
   boot_diagnostics {
     enabled     = "${var.compute["boot_diagnostics_enabled"] ? lookup(var.computes[count.index], "boot_diagnostics_enabled", var.compute["boot_diagnostics_enabled"]) : false}"
