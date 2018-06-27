@@ -1,6 +1,14 @@
+locals {
+  lb_required    = "${var.lb["required"] && 0 < length(var.computes)}"
+  ilb_required   = "${var.ilb["required"] && 0 < length(var.computes)}"
+  avset_required = "${local.lb_required || local.ilb_required || (var.avset["required"] && 0 < length(var.computes))}"
+
+  vm_name_format = "${var.compute["name"]}-%02d"
+}
+
 # lb
 resource "azurerm_public_ip" "ip" {
-  count = "${var.lb["required"] ? 1 : 0}"
+  count = "${local.lb_required ? 1 : 0}"
 
   resource_group_name = "${var.compute["resource_group_name"]}"
 
@@ -12,7 +20,7 @@ resource "azurerm_public_ip" "ip" {
 }
 
 resource "azurerm_lb" "lb" {
-  count = "${var.lb["required"] ? 1 : 0}"
+  count = "${local.lb_required ? 1 : 0}"
 
   resource_group_name = "${var.compute["resource_group_name"]}"
 
@@ -27,7 +35,7 @@ resource "azurerm_lb" "lb" {
 }
 
 resource "azurerm_lb_backend_address_pool" "lb_bepool" {
-  count = "${var.lb["required"] ? 1 : 0}"
+  count = "${local.lb_required ? 1 : 0}"
 
   resource_group_name = "${var.compute["resource_group_name"]}"
 
@@ -36,7 +44,7 @@ resource "azurerm_lb_backend_address_pool" "lb_bepool" {
 }
 
 resource "azurerm_lb_probe" "lb_probes" {
-  count = "${var.lb["required"] ? length(var.lb_probes) : 0}"
+  count = "${local.lb_required ? length(var.lb_probes) : 0}"
 
   resource_group_name = "${var.compute["resource_group_name"]}"
   loadbalancer_id     = "${azurerm_lb.lb.id}"
@@ -51,7 +59,7 @@ resource "azurerm_lb_probe" "lb_probes" {
 }
 
 resource "azurerm_lb_rule" "lb_rules" {
-  count = "${var.lb["required"] ? length(var.lb_rules) : 0}"
+  count = "${local.lb_required ? length(var.lb_rules) : 0}"
 
   resource_group_name            = "${var.compute["resource_group_name"]}"
   loadbalancer_id                = "${azurerm_lb.lb.id}"
@@ -71,7 +79,7 @@ resource "azurerm_lb_rule" "lb_rules" {
 
 # ilb
 data "azurerm_subnet" "ilb_subnet" {
-  count = "${var.ilb["required"] ? 1 : 0}"
+  count = "${local.ilb_required ? 1 : 0}"
 
   resource_group_name  = "${var.ilb["vnet_resource_group_name"]}"
   virtual_network_name = "${var.ilb["vnet_name"]}"
@@ -79,7 +87,7 @@ data "azurerm_subnet" "ilb_subnet" {
 }
 
 resource "azurerm_lb" "ilb" {
-  count = "${var.ilb["required"] ? 1 : 0}"
+  count = "${local.ilb_required ? 1 : 0}"
 
   resource_group_name = "${var.compute["resource_group_name"]}"
 
@@ -96,7 +104,7 @@ resource "azurerm_lb" "ilb" {
 }
 
 resource "azurerm_lb_backend_address_pool" "ilb_bepool" {
-  count = "${var.ilb["required"] ? 1 : 0}"
+  count = "${local.ilb_required ? 1 : 0}"
 
   resource_group_name = "${var.compute["resource_group_name"]}"
 
@@ -105,7 +113,7 @@ resource "azurerm_lb_backend_address_pool" "ilb_bepool" {
 }
 
 resource "azurerm_lb_probe" "ilb_probes" {
-  count = "${var.ilb["required"] ? length(var.ilb_probes) : 0}"
+  count = "${local.ilb_required ? length(var.ilb_probes) : 0}"
 
   resource_group_name = "${var.compute["resource_group_name"]}"
   loadbalancer_id     = "${azurerm_lb.ilb.id}"
@@ -120,7 +128,7 @@ resource "azurerm_lb_probe" "ilb_probes" {
 }
 
 resource "azurerm_lb_rule" "ilb_rules" {
-  count = "${var.ilb["required"] ? length(var.ilb_rules) : 0}"
+  count = "${local.ilb_required ? length(var.ilb_rules) : 0}"
 
   resource_group_name            = "${var.compute["resource_group_name"]}"
   loadbalancer_id                = "${azurerm_lb.ilb.id}"
@@ -139,11 +147,6 @@ resource "azurerm_lb_rule" "ilb_rules" {
 }
 
 # virtual_machine
-locals {
-  vm_name_format = "${var.compute["name"]}-%02d"
-  avset_required = "${var.lb["required"] || var.ilb["required"] || var.avset["required"]}"
-}
-
 data "azurerm_subnet" "subnet" {
   resource_group_name  = "${var.subnet["vnet_resource_group_name"]}"
   virtual_network_name = "${var.subnet["vnet_name"]}"
@@ -172,7 +175,7 @@ data "azurerm_snapshot" "snapshot_data" {
 }
 
 resource "azurerm_virtual_machine" "vms" {
-  count = "${var.snapshot_data["name"] == "" ? length(var.computes) : 0}"
+  count = "${var.compute["data_disk_required"] ? 0 : length(var.computes)}"
 
   resource_group_name = "${var.compute["resource_group_name"]}"
 
@@ -201,7 +204,7 @@ resource "azurerm_virtual_machine" "vms" {
 }
 
 resource "azurerm_virtual_machine" "vms_with" {
-  count = "${var.snapshot_data["name"] != "" ? length(var.computes) : 0}"
+  count = "${var.compute["data_disk_required"] ? length(var.computes) : 0}"
 
   resource_group_name = "${var.compute["resource_group_name"]}"
 
